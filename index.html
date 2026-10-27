@@ -1495,22 +1495,15 @@
         return;
       }
 
-      const income = curMonth.baseSalary + curMonth.specialAllowance;
-      const debits = curMonth.debitList.reduce((s, d) => s + d.price, 0);
-      let avoided = curMonth.avoidedCashList.reduce((s, a) => s + a.price, 0);
-      avoided += curMonth.subscriptions.filter(s => s.type === "avoid").reduce((s, sub) => s + sub.price, 0);
-      
-      const totalShortage = Math.max(0, debits - (income + avoided));
-      const reserveAsset = curMonth.assetsList.find(a => a.isReserve || a.name.includes("現金"));
-      const currentReserve = reserveAsset ? reserveAsset.balance : 30000;
-      const finalReserve = totalShortage > 0 ? Math.max(0, currentReserve - totalShortage) : currentReserve;
-
+      // 現月の計算結果を反映した月末残高を翌月へ引き継ぐ
+      const finalBalances = computeMonthEndBalances();
       const newMonthData = JSON.parse(JSON.stringify(curMonth));
       newMonthData.avoidedCashList = [];
-      const newReserve = newMonthData.assetsList.find(a => a.isReserve || a.name.includes("現金"));
-      if (newReserve) {
-        newReserve.balance = finalReserve;
-      }
+      newMonthData.assetsList.forEach(a => {
+        if (finalBalances[a.id] !== undefined) {
+          a.balance = finalBalances[a.id];
+        }
+      });
 
       multiMonthStore.months[nextMonthKey] = newMonthData;
       activeMonthKey = nextMonthKey;
@@ -2086,6 +2079,62 @@
       }, 300);
     }
 
+    // 現月の月末残高を計算して返すヘルパー
+    function computeMonthEndBalances() {
+      const incomeTotal = curMonth.baseSalary + curMonth.specialAllowance;
+      let avoidedCashTotal = curMonth.avoidedCashList.reduce((sum, item) => sum + item.price, 0);
+      avoidedCashTotal += curMonth.subscriptions.filter(s => s.type === "avoid").reduce((sum, item) => sum + item.price, 0);
+
+      let reserveAsset = curMonth.assetsList.find(a => a.isReserve || a.name.includes("現金"));
+      if (!reserveAsset && curMonth.assetsList.length > 0) reserveAsset = curMonth.assetsList[0];
+
+      const finalBalances = {};
+      curMonth.assetsList.forEach(a => { finalBalances[a.id] = a.balance || 0; });
+
+      const accountDebitMap = {};
+      curMonth.debitList.forEach(d => {
+        const accId = d.accountId || (curMonth.assetsList[0] ? curMonth.assetsList[0].id : 0);
+        accountDebitMap[accId] = (accountDebitMap[accId] || 0) + d.price;
+      });
+
+      const sortedAccounts = [...curMonth.assetsList].sort((a, b) => {
+        const aYucho = a.name.includes("ゆうちょ") ? 1 : 0;
+        const bYucho = b.name.includes("ゆうちょ") ? 1 : 0;
+        return bYucho - aYucho;
+      });
+
+      let remSalary = incomeTotal;
+      let remAvoided = avoidedCashTotal;
+
+      sortedAccounts.forEach(acc => {
+        let remDebit = accountDebitMap[acc.id] || 0;
+        if (remDebit > 0) {
+          const bySal = Math.min(remDebit, remSalary);
+          remSalary -= bySal;
+          remDebit -= bySal;
+
+          const byAvoid = Math.min(remDebit, remAvoided);
+          remAvoided -= byAvoid;
+          remDebit -= byAvoid;
+
+          // 引き落とし口座（ゆうちょ銀行など）の残高から最優先で引き落とす
+          if (acc !== reserveAsset && remDebit > 0) {
+            const avail = finalBalances[acc.id] || 0;
+            const byAcc = Math.min(remDebit, avail);
+            finalBalances[acc.id] = avail - byAcc;
+            remDebit -= byAcc;
+          }
+
+          // 口座残高を使い切っても足りない分だけ手元現金から補填
+          if (remDebit > 0 && reserveAsset) {
+            finalBalances[reserveAsset.id] = Math.max(0, (finalBalances[reserveAsset.id] || 0) - remDebit);
+          }
+        }
+      });
+
+      return finalBalances;
+    }
+
     function calculateAndRender(animated = false) {
       const incomeTotal = curMonth.baseSalary + curMonth.specialAllowance;
       const directDebitTotal = curMonth.debitList.reduce((sum, item) => sum + item.price, 0);
@@ -2100,7 +2149,12 @@
       if (!reserveAsset && curMonth.assetsList.length > 0) {
         reserveAsset = curMonth.assetsList[0];
       }
-      const initialCash = reserveAsset ? reserveAsset.balance : 30000;
+
+      // 各資産の月末残高マップ（初期値は現在の残高）
+      const finalAssetBalances = {};
+      curMonth.assetsList.forEach(a => {
+        finalAssetBalances[a.id] = a.balance || 0;
+      });
 
       // 各口座の引き落とし額の集計
       const accountDebitMap = {};
@@ -2116,55 +2170,81 @@
         return bYucho - aYucho;
       });
 
-      // 【パターンC】給料を真っ先に引き落とし口座へ充当（ゆうちょ銀行最優先）
+      // 充当シミュレーション:
+      // 1. 給料 → 2. 避けた現金 → 3. 引き落とし口座（ゆうちょ等）の残高 → 4. 手元現金（最終手段）
       let remainingSalary = incomeTotal;
-      const salaryPaidMap = {}; // 口座ごとに給料から支払った額
-      const needFromHandMap = {}; // 給料で足りず手元から必要な額
+      let remainingAvoided = avoidedCashTotal;
+
+      const salaryPaidMap = {};       // 口座ごとに給料から支払った額
+      const avoidedPaidMap = {};      // 口座ごとに避けた現金から支払った額
+      const accountBalUsedMap = {};   // 口座ごとの既存残高から引き落とされた額
+      const reservePaidMap = {};      // 口座ごとに手元現金から補填した額
 
       sortedAccounts.forEach(acc => {
-        const debit = accountDebitMap[acc.id] || 0;
-        if (debit > 0) {
-          const paidBySal = Math.min(debit, remainingSalary);
-          salaryPaidMap[acc.id] = paidBySal;
-          needFromHandMap[acc.id] = debit - paidBySal;
-          remainingSalary -= paidBySal;
+        let remDebit = accountDebitMap[acc.id] || 0;
+        if (remDebit > 0) {
+          // ① まず給料から充当
+          const bySal = Math.min(remDebit, remainingSalary);
+          remainingSalary -= bySal;
+          remDebit -= bySal;
+
+          // ② 次に避けた現金から充当
+          const byAvoid = Math.min(remDebit, remainingAvoided);
+          remainingAvoided -= byAvoid;
+          remDebit -= byAvoid;
+
+          // ③ 次に引き落とし先口座（ゆうちょ銀行など）の残高から優先して引き落とす！
+          let byAccBal = 0;
+          if (acc !== reserveAsset && remDebit > 0) {
+            const availBal = finalAssetBalances[acc.id] || 0;
+            byAccBal = Math.min(remDebit, availBal);
+            finalAssetBalances[acc.id] = availBal - byAccBal;
+            remDebit -= byAccBal;
+          }
+
+          // ④ 引き落とし口座の残高も使い切ってなお足りない分のみ、手元現金から補填！
+          let byReserve = 0;
+          if (remDebit > 0) {
+            byReserve = remDebit;
+            if (reserveAsset) {
+              finalAssetBalances[reserveAsset.id] = Math.max(0, (finalAssetBalances[reserveAsset.id] || 0) - byReserve);
+            }
+          }
+
+          salaryPaidMap[acc.id] = bySal;
+          avoidedPaidMap[acc.id] = byAvoid;
+          accountBalUsedMap[acc.id] = byAccBal;
+          reservePaidMap[acc.id] = byReserve;
         } else {
           salaryPaidMap[acc.id] = 0;
-          needFromHandMap[acc.id] = 0;
+          avoidedPaidMap[acc.id] = 0;
+          accountBalUsedMap[acc.id] = 0;
+          reservePaidMap[acc.id] = 0;
         }
       });
 
-      // 給料充当後の全口座の残り不足額合計
-      const totalRemainingNeed = Object.values(needFromHandMap).reduce((a, b) => a + b, 0);
-      const isShortageOverall = directDebitTotal > (incomeTotal + avoidedCashTotal);
-      const shortageAmount = Math.max(0, directDebitTotal - (incomeTotal + avoidedCashTotal));
+      const totalUsedSalary = incomeTotal - remainingSalary;
+      const totalUsedAvoided = avoidedCashTotal - remainingAvoided;
+      const totalUsedAccountBal = Object.values(accountBalUsedMap).reduce((a, b) => a + b, 0);
+      const totalUsedReserve = Object.values(reservePaidMap).reduce((a, b) => a + b, 0);
 
-      // 手元現金の使用量計算（手元現金を温存するルール）
-      let usedAvoidedCash = 0;
-      let usedReserveCash = 0;
-      let finalCash = initialCash;
-      let salarySurplus = remainingSalary; // 引き落とし全額充当後の余った給料
+      // 給料と避けた現金だけでは足りなかった不足総額（口座残高＋手元現金でカバーする額）
+      const rawShortageAfterIncomeAndAvoid = totalUsedAccountBal + totalUsedReserve;
+      const isShortageOverall = rawShortageAfterIncomeAndAvoid > 0;
+      const salarySurplus = remainingSalary;
+      const finalReserveCash = reserveAsset ? finalAssetBalances[reserveAsset.id] : 0;
 
-      if (totalRemainingNeed > 0) {
-        // 給料だけでは足りないため、避けた現金から必要最小限だけ入金
-        usedAvoidedCash = Math.min(totalRemainingNeed, avoidedCashTotal);
-        const stillShort = totalRemainingNeed - usedAvoidedCash;
-        if (stillShort > 0) {
-          // 避けた現金でも足りない場合のみ、手元現金から補填
-          usedReserveCash = stillShort;
-          finalCash = Math.max(0, initialCash - usedReserveCash);
-        }
-      }
+      // 実際に外から銀行口座へ入金が必要な合計額（引き落とし総額 − 口座既存残高から充当された分）
+      const totalActualDepositNeed = Math.max(0, directDebitTotal - totalUsedAccountBal);
 
       // 1. カルーセル過不足カード
       const summaryCard = document.getElementById("carouselSummaryCard");
       if (summaryCard) {
         if (isShortageOverall) {
           summaryCard.className = "wallet-card accent-red";
-          if (animated) animateCount("cardSummaryAmount", -shortageAmount, "-¥");
-          else document.getElementById("cardSummaryAmount").textContent = `-¥${shortageAmount.toLocaleString()}`;
+          if (animated) animateCount("cardSummaryAmount", -rawShortageAfterIncomeAndAvoid, "-¥");
+          else document.getElementById("cardSummaryAmount").textContent = `-¥${rawShortageAfterIncomeAndAvoid.toLocaleString()}`;
         } else {
-          // 黒字（手元現金を一切使わず、給料が余った場合）
           summaryCard.className = "wallet-card accent-green";
           const displaySurplus = salarySurplus > 0 ? salarySurplus : (incomeTotal + avoidedCashTotal - directDebitTotal);
           if (animated) animateCount("cardSummaryAmount", displaySurplus, "+¥");
@@ -2172,23 +2252,23 @@
         }
       }
 
-      // 2. 各資産カードの金額同期
+      // 2. 各資産カードの金額同期（ゆうちょ銀行も引き落とされた後の残高を反映！）
       curMonth.assetsList.forEach((asset) => {
         const valElem = document.getElementById(`card-asset-val-${asset.id}`);
         if (valElem) {
-          const displayBal = (asset === reserveAsset) ? finalCash : asset.balance;
+          const displayBal = finalAssetBalances[asset.id] !== undefined ? finalAssetBalances[asset.id] : asset.balance;
           if (animated) animateCount(`card-asset-val-${asset.id}`, displayBal);
           else valElem.textContent = `¥${displayBal.toLocaleString()}`;
         }
       });
 
-      // 3. ヒーローカード (手元から用意する入金額)
+      // 3. ヒーローカード (口座への入金必要合計額)
       const heroCard = document.getElementById("heroCard");
       const heroBadge = document.getElementById("heroBadge");
       const heroBadgeText = document.getElementById("heroBadgeText");
 
-      if (animated) animateCount("heroDepositAmount", totalRemainingNeed);
-      else document.getElementById("heroDepositAmount").textContent = `¥${totalRemainingNeed.toLocaleString()}`;
+      if (animated) animateCount("heroDepositAmount", totalActualDepositNeed);
+      else document.getElementById("heroDepositAmount").textContent = `¥${totalActualDepositNeed.toLocaleString()}`;
 
       // 口座ごとの入金内訳リスト
       const bankBreakdownContainer = document.getElementById("bankDepositBreakdownList");
@@ -2198,15 +2278,17 @@
         const rawDebit = accountDebitMap[acc.id] || 0;
         if (rawDebit > 0) {
           const fromSal = salaryPaidMap[acc.id] || 0;
-          const fromHand = needFromHandMap[acc.id] || 0;
-          let breakdownNote = "";
-          if (fromSal > 0 && fromHand > 0) {
-            breakdownNote = `(給料¥${fromSal.toLocaleString()} + 手元¥${fromHand.toLocaleString()})`;
-          } else if (fromSal > 0) {
-            breakdownNote = `(給料から全額充当)`;
-          } else {
-            breakdownNote = `(手元現金から入金)`;
-          }
+          const fromAvoid = avoidedPaidMap[acc.id] || 0;
+          const fromAccBal = accountBalUsedMap[acc.id] || 0;
+          const fromRes = reservePaidMap[acc.id] || 0;
+          const actualDepositToBank = rawDebit - fromAccBal;
+
+          const parts = [];
+          if (fromSal > 0) parts.push(`給料¥${fromSal.toLocaleString()}`);
+          if (fromAvoid > 0) parts.push(`避けた現金¥${fromAvoid.toLocaleString()}`);
+          if (fromAccBal > 0) parts.push(`口座残高¥${fromAccBal.toLocaleString()}使用`);
+          if (fromRes > 0) parts.push(`手元補填¥${fromRes.toLocaleString()}`);
+          const breakdownNote = parts.length > 0 ? `(${parts.join(" + ")})` : "";
 
           bankBreakdownContainer.innerHTML += `
             <div class="bank-deposit-card">
@@ -2219,42 +2301,47 @@
                   <div style="font-size: 11px; color: var(--text-sub);">${breakdownNote}</div>
                 </div>
               </div>
-              <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0;">¥${rawDebit.toLocaleString()}</span>
+              <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0;">¥${actualDepositToBank.toLocaleString()}</span>
             </div>
           `;
         }
       });
 
-      // アクションガイド（パターンC：給料を真っ先に充て、手元現金を温存）
+      // アクションガイド（引き落とし口座の残高を優先使用し、手元現金を温存）
       if (isShortageOverall) {
         heroCard.className = "hero-banner-card status-shortage";
         heroBadge.className = "hero-status-pill shortage";
-        heroBadgeText.textContent = `${shortageAmount.toLocaleString()}円 不足`;
+        heroBadgeText.textContent = `${rawShortageAfterIncomeAndAvoid.toLocaleString()}円 不足`;
 
-        document.getElementById("step1Text").innerHTML = `給料から <strong>${(incomeTotal - remainingSalary).toLocaleString()}円</strong> を引き落とし口座へ（ゆうちょ優先）`;
-        document.getElementById("step2Text").innerHTML = `避けておいた現金から <strong>${usedAvoidedCash.toLocaleString()}円</strong> を口座へ入金`;
-        document.getElementById("step3Text").innerHTML = `不足分の <strong>${shortageAmount.toLocaleString()}円</strong> を${escapeStr(reserveAsset ? reserveAsset.name : '手元現金')}から補填`;
-        document.getElementById("step4Text").innerHTML = `補填後の手元現金残り：<strong>${finalCash.toLocaleString()}円</strong>`;
+        document.getElementById("step1Text").innerHTML = `給料から <strong>${totalUsedSalary.toLocaleString()}円</strong> を引き落とし口座へ入金`;
+        document.getElementById("step2Text").innerHTML = `避けておいた現金から <strong>${totalUsedAvoided.toLocaleString()}円</strong> を口座へ入金`;
+
+        if (totalUsedAccountBal > 0 && totalUsedReserve > 0) {
+          document.getElementById("step3Text").innerHTML = `不足分（${rawShortageAfterIncomeAndAvoid.toLocaleString()}円）のうち、<strong>${totalUsedAccountBal.toLocaleString()}円</strong> を引き落とし口座の残高から優先使用し、残り <strong>${totalUsedReserve.toLocaleString()}円</strong> だけを手元現金から補填`;
+        } else if (totalUsedAccountBal > 0 && totalUsedReserve === 0) {
+          document.getElementById("step3Text").innerHTML = `不足分（<strong>${totalUsedAccountBal.toLocaleString()}円</strong>）は引き落とし口座の残高から全額充当（手元現金の補填は <strong>0円</strong>！）`;
+        } else {
+          document.getElementById("step3Text").innerHTML = `不足分の <strong>${totalUsedReserve.toLocaleString()}円</strong> を${escapeStr(reserveAsset ? reserveAsset.name : '手元現金')}から補填`;
+        }
+
+        document.getElementById("step4Text").innerHTML = `補填後の手元現金残り：<strong>${finalReserveCash.toLocaleString()}円</strong>`;
       } else {
         heroCard.className = "hero-banner-card status-ok";
         heroBadge.className = "hero-status-pill ok";
         const displaySurplus = salarySurplus > 0 ? salarySurplus : (incomeTotal + avoidedCashTotal - directDebitTotal);
         heroBadgeText.textContent = `黒字（${displaySurplus.toLocaleString()}円 余り）`;
 
-        if (totalRemainingNeed === 0) {
-          document.getElementById("step1Text").innerHTML = `給料から <strong>${directDebitTotal.toLocaleString()}円</strong> を引き落とし口座へ`;
-          document.getElementById("step2Text").innerHTML = `★手元の現金（避けた現金・手元残高）は <strong>1円も使わず全額温存！</strong>`;
-          document.getElementById("step3Text").innerHTML = `給料の残り（<strong>${salarySurplus.toLocaleString()}円</strong>）はお財布へ`;
-          document.getElementById("step4Text").innerHTML = `${escapeStr(reserveAsset ? reserveAsset.name : '手元現金')}は手付かず：<strong>${initialCash.toLocaleString()}円</strong>`;
+        document.getElementById("step1Text").innerHTML = `給料から <strong>${totalUsedSalary.toLocaleString()}円</strong> を引き落とし口座へ`;
+        if (totalUsedAvoided > 0) {
+          document.getElementById("step2Text").innerHTML = `避けておいた現金から <strong>${totalUsedAvoided.toLocaleString()}円</strong> を口座へ入金`;
         } else {
-          document.getElementById("step1Text").innerHTML = `給料から全額（<strong>${incomeTotal.toLocaleString()}円</strong>）を引き落とし口座へ`;
-          document.getElementById("step2Text").innerHTML = `避けておいた現金から <strong>${usedAvoidedCash.toLocaleString()}円</strong> を口座へ入金`;
-          document.getElementById("step3Text").innerHTML = `手元現金（${initialCash.toLocaleString()}円）は <strong>手付かず温存！</strong>`;
-          document.getElementById("step4Text").innerHTML = `手元現金の残り：<strong>${finalCash.toLocaleString()}円</strong>`;
+          document.getElementById("step2Text").innerHTML = `★手元の現金は <strong>1円も使わず全額温存！</strong>`;
         }
+        document.getElementById("step3Text").innerHTML = `口座残高・手元現金は <strong>手付かず温存！</strong>`;
+        document.getElementById("step4Text").innerHTML = `手元現金の残り：<strong>${finalReserveCash.toLocaleString()}円</strong>`;
       }
 
-      // 月末残高見込み
+      // 月末残高見込み（各口座の引き落とし後の正確な残高を表示）
       const balanceContainer = document.getElementById("monthEndBalanceList");
       balanceContainer.innerHTML = "";
 
@@ -2271,7 +2358,7 @@
       `;
 
       curMonth.assetsList.forEach((asset) => {
-        const bal = (asset === reserveAsset) ? finalCash : asset.balance;
+        const bal = finalAssetBalances[asset.id] !== undefined ? finalAssetBalances[asset.id] : asset.balance;
         balanceContainer.innerHTML += `
           <div class="apple-row">
             <div class="row-leading">
