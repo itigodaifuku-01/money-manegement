@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Money Flow</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Money Flow">
+  <meta name="theme-color" content="#F2F2F7">
+
+  <!-- Apple Touch Icon (ホーム画面用アプリアイコン: Money Flowロゴと完全一致) -->
+  <link rel="apple-touch-icon" id="appleTouchIcon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%23000000'/%3E%3Cpath d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' transform='translate(32.4 32.4) scale(4.8)' fill='none' stroke='%23FFFFFF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%23000000'/%3E%3Cpath d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' transform='translate(32.4 32.4) scale(4.8)' fill='none' stroke='%23FFFFFF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <style>
+    /* ==========================================================
+       Apple HIG Tokens & Physics
+       ========================================================== */
+    :root {
+      --bg-canvas: #F2F2F7;
+      --bg-card: #FFFFFF;
+      --bg-card-secondary: #F9F9FB;
+      --text-main: #000000;
+      --text-sub: #8E8E93;
+      --text-tertiary: #C7C7CC;
+      
+      --ios-blue: #007AFF;
+      --ios-green: #34C759;
+      --ios-red: #FF3B30;
+      --ios-orange: #FF9500;
+      --ios-indigo: #5856D6;
+      --ios-purple: #AF52DE;
+      --ios-teal: #30B0C7;
+      
+      --separator: rgba(60, 60, 67, 0.12);
+      --separator-light: rgba(60, 60, 67, 0.06);
+      --card-radius: 20px;
+      --icon-badge-radius: 9px;
+      
+      --spring-smooth: cubic-bezier(0.2, 0.9, 0.3, 1);
+      --spring-bouncy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      
+      --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03);
+      --shadow-floating: 0 12px 32px rgba(0, 0, 0, 0.08);
+      --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Hiragino Sans", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 90px;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .icon-sm { width: 14px; height: 14px; }
+    .icon-lg { width: 22px; height: 22px; }
+
+    .icon-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--icon-badge-radius);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      flex-shrink: 0;
+      transition: transform 0.2s var(--spring-bouncy);
+    }
+    .badge-blue { background: #007AFF; }
+    .badge-green { background: #34C759; }
+    .badge-orange { background: #FF9500; }
+    .badge-red { background: #FF3B30; }
+    .badge-indigo { background: #5856D6; }
+    .badge-purple { background: #AF52DE; }
+    .badge-teal { background: #30B0C7; }
+    .badge-gray { background: #8E8E93; }
+
+    /* Navigation Bar */
+    .nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(242, 242, 247, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 0.5px solid var(--separator);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      background: #000000;
+      color: #FFFFFF;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.25s var(--spring-bouncy);
+    }
+    .brand-mark:active {
+      transform: scale(0.9);
+    }
+
+    .nav-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .month-pill-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: rgba(0, 122, 255, 0.08);
+      color: var(--ios-blue);
+      border: none;
+      padding: 6px 14px;
+      border-radius: 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .month-pill-select:active {
+      transform: scale(0.95);
+      background: rgba(0, 122, 255, 0.16);
+    }
+
+    .nav-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s var(--spring-bouncy);
+    }
+    .nav-icon-btn:active {
+      transform: scale(0.85);
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    /* Container */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px 16px 40px;
+    }
+
+    .large-header {
+      padding: 12px 6px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .large-header h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: -0.1px;
+      margin: 0 0 8px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 1. カルーセル (ステータスカード) */
+    .carousel-section {
+      margin-bottom: 24px;
+    }
+
+    .carousel-track {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 4px 6px 10px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .carousel-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .wallet-card {
+      flex: 0 0 190px;
+      scroll-snap-align: start;
+      border-radius: var(--card-radius);
+      padding: 16px;
+      position: relative;
+      background: #FFFFFF;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      transition: transform 0.25s var(--spring-bouncy);
+    }
+    .wallet-card:active {
+      transform: scale(0.95);
+    }
+
+    .wallet-card.primary {
+      background: linear-gradient(145deg, #1C1C1E, #2C2C2E);
+      color: #FFFFFF;
+      border: none;
+    }
+    .wallet-card.primary .card-label {
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    .wallet-card.accent-red {
+      background: linear-gradient(145deg, #FF3B30, #D70015);
+      color: #FFFFFF;
+      border: none;
+    }
+    .wallet-card.accent-red .card-label {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .wallet-card.accent-green {
+      background: linear-gradient(145deg, #34C759, #1F8A37);
+      color: #FFFFFF;
+      border: none;
+    }
+    .wallet-card.accent-green .card-label {
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .card-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+    .card-val {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 正確に連動するページネーションドット */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .carousel-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--text-tertiary);
+      transition: width 0.25s var(--spring-smooth), background-color 0.25s ease;
+      cursor: pointer;
+    }
+    .carousel-dot.active {
+      width: 18px;
+      background: var(--ios-blue);
+    }
+
+    /* Apple Grouped Container */
+    .apple-group {
+      background: var(--bg-card);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      margin-bottom: 22px;
+      overflow: hidden;
+    }
+
+    .apple-row {
+      display: flex;
+      align-items: center;
+      padding: 13px 16px;
+      border-bottom: 0.5px solid var(--separator-light);
+      position: relative;
+    }
+    .apple-row:last-child {
+      border-bottom: none;
+    }
+
+    .row-leading {
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .row-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: -0.3px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row-main-col {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      margin-right: 8px;
+    }
+    .item-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      flex-shrink: 0;
+    }
+    .item-text-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-title-input {
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-main);
+      outline: none;
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      padding: 2px 0;
+    }
+
+    .account-picker-tag {
+      appearance: none;
+      -webkit-appearance: none;
+      background: rgba(0, 122, 255, 0.08);
+      color: var(--ios-blue);
+      border: none;
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      margin-right: 4px;
+      max-width: 110px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .row-trailing {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .apple-input {
+      border: none;
+      background: transparent;
+      font-size: 17px;
+      font-weight: 600;
+      text-align: right;
+      color: var(--text-main);
+      width: 100px;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      padding: 4px 0;
+      border-bottom: 1.5px solid transparent;
+      transition: border-color 0.2s ease;
+      flex-shrink: 0;
+    }
+    .apple-input:focus {
+      border-bottom-color: var(--ios-blue);
+    }
+    .currency-symbol {
+      font-size: 14px;
+      color: var(--text-sub);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* サブスク行用スタイル */
+    .sub-row-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      position: relative;
+      border-bottom: 0.5px solid var(--separator-light);
+    }
+    .sub-row-item:last-child {
+      border-bottom: none;
+    }
+    .sub-left-col {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      margin-right: 8px;
+    }
+    .sub-name-input {
+      font-size: 15px;
+      flex: 1;
+      min-width: 60px;
+    }
+    .sub-segmented {
+      width: 130px;
+      flex-shrink: 0;
+    }
+    .sub-right-col {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sub-price-input {
+      width: 72px !important;
+    }
+    .sub-delete-btn {
+      border: none;
+      background: transparent;
+      color: var(--ios-red);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Swipe Container */
+    .swipe-container {
+      position: relative;
+      overflow: hidden;
+      background: var(--ios-red);
+      border-bottom: 0.5px solid var(--separator-light);
+      transition: max-height 0.3s var(--spring-smooth), opacity 0.3s ease;
+    }
+    .swipe-container:last-child {
+      border-bottom: none;
+    }
+    .swipe-container.removing {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      border-bottom: none !important;
+    }
+
+    .swipe-surface {
+      background: var(--bg-card);
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.25s var(--spring-smooth);
+      touch-action: pan-y;
+    }
+
+    .swipe-delete-trigger {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 80px;
+      background: var(--ios-red);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .add-action-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px;
+      color: var(--ios-blue);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(0, 122, 255, 0.03);
+      transition: background 0.15s var(--spring-smooth), transform 0.15s var(--spring-bouncy);
+    }
+    .add-action-cell:active {
+      transform: scale(0.98);
+      background: rgba(0, 122, 255, 0.1);
+    }
+
+    /* Accordion */
+    .accordion-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .accordion-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .accordion-tag {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(0, 122, 255, 0.1);
+      color: var(--ios-blue);
+    }
+    .chevron-icon {
+      color: var(--text-tertiary);
+      transition: transform 0.35s var(--spring-smooth);
+    }
+    .accordion-toggle.open .chevron-icon {
+      transform: rotate(180deg);
+    }
+
+    .accordion-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s var(--spring-smooth);
+      border-top: 0.5px solid var(--separator-light);
+    }
+    .accordion-panel.open {
+      max-height: 800px;
+    }
+
+    .ios-segmented {
+      display: flex;
+      background: #E5E5EA;
+      border-radius: 9px;
+      padding: 2px;
+      width: 150px;
+    }
+    .ios-segment-item {
+      flex: 1;
+      padding: 5px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--text-sub);
+      transition: all 0.25s var(--spring-smooth);
+    }
+    .ios-segment-item.selected {
+      background: #FFFFFF;
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      transform: scale(1.02);
+    }
+
+    .btn-apple-primary {
+      width: 100%;
+      background: var(--ios-blue);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--card-radius);
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.28);
+      transition: transform 0.18s var(--spring-bouncy);
+    }
+    .btn-apple-primary:active {
+      transform: scale(0.96);
+    }
+
+    .skeleton-wrap {
+      display: none;
+      background: var(--bg-card);
+      border-radius: var(--card-radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-soft);
+    }
+    .skeleton-line {
+      height: 20px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #E5E5EA 25%, #F2F2F7 50%, #E5E5EA 75%);
+      background-size: 200% 100%;
+      margin-bottom: 12px;
+      animation: pulseShimmer 1.2s infinite;
+    }
+    .skeleton-line.w-40 { width: 40%; }
+    .skeleton-line.h-large { height: 48px; border-radius: 10px; }
+    @keyframes pulseShimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .result-wrap {
+      display: none;
+      animation: appleSlideUp 0.4s var(--spring-smooth);
+    }
+    @keyframes appleSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-banner-card {
+      background: var(--bg-card);
+      border-radius: var(--card-radius);
+      padding: 24px;
+      box-shadow: var(--shadow-floating);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      margin-bottom: 22px;
+    }
+    .hero-banner-card.status-shortage {
+      border-left: 6px solid var(--ios-red);
+    }
+    .hero-banner-card.status-ok {
+      border-left: 6px solid var(--ios-green);
+    }
+
+    .hero-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+      animation: badgePop 0.35s var(--spring-bouncy);
+    }
+    @keyframes badgePop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .hero-status-pill.shortage {
+      background: rgba(255, 59, 48, 0.1);
+      color: var(--ios-red);
+    }
+    .hero-status-pill.ok {
+      background: rgba(52, 199, 89, 0.1);
+      color: var(--ios-green);
+    }
+
+    .hero-headline-sub {
+      font-size: 14px;
+      color: var(--text-sub);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .hero-headline-main {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .action-guide-box {
+      background: rgba(0, 122, 255, 0.04);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid rgba(0, 122, 255, 0.12);
+    }
+    .guide-box-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ios-blue);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .guide-step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+    .guide-step-row:last-child {
+      margin-bottom: 0;
+    }
+    .step-badge {
+      width: 20px;
+      height: 20px;
+      background: var(--ios-blue);
+      color: #FFFFFF;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* 口座別 入金サマリーカード */
+    .bank-deposit-card {
+      background: #F9F9FB;
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border: 0.5px solid var(--separator-light);
+    }
+
+    /* Bottom Sheet */
+    .sheet-scrim {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    .sheet-scrim.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .sheet-panel {
+      position: fixed;
+      left: 0; right: 0; bottom: -100%;
+      background: var(--bg-card);
+      border-radius: 28px 28px 0 0;
+      padding: 16px 20px 40px;
+      z-index: 201;
+      box-shadow: var(--shadow-sheet);
+      transition: bottom 0.35s var(--spring-smooth);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .sheet-panel.visible {
+      bottom: 0;
+    }
+
+    .sheet-grabber {
+      width: 36px;
+      height: 5px;
+      background: var(--text-tertiary);
+      border-radius: 3px;
+      margin: 0 auto 16px;
+    }
+
+    .sheet-header-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .quick-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .quick-chip {
+      background: rgba(0, 0, 0, 0.04);
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.15s var(--spring-bouncy);
+    }
+    .quick-chip:active {
+      transform: scale(0.92);
+      background: rgba(0, 122, 255, 0.15);
+      color: var(--ios-blue);
+    }
+
+    .sheet-field-wrap {
+      margin-bottom: 14px;
+    }
+    .sheet-text-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--separator);
+      background: var(--bg-card-secondary);
+      font-size: 16px;
+      outline: none;
+      color: var(--text-main);
+    }
+    .sheet-text-input:focus {
+      border-color: var(--ios-blue);
+      background: #FFFFFF;
+    }
+
+    .sheet-button-grid {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .btn-sheet-cancel {
+      flex: 1;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      background: #E5E5EA;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-sheet-submit {
+      flex: 1;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      background: var(--ios-blue);
+      font-size: 16px;
+      font-weight: 600;
+      color: #FFFFFF;
+      cursor: pointer;
+    }
+
+    /* ==========================================================
+       Toast (Dynamic Island) - 完全確実に自動で消える設定
+       ========================================================== */
+    .toast-island {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      -webkit-transform: translateX(-50%) translateY(-100px);
+      background: rgba(20, 20, 22, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #FFFFFF;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 13.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      z-index: 300;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.3s ease;
+      will-change: transform, opacity;
+    }
+    .toast-island.active {
+      transform: translateX(-50%) translateY(0);
+      -webkit-transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 240;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-dialog {
+      background: var(--bg-card);
+      border-radius: 22px;
+      padding: 24px;
+      max-width: 320px;
+      width: 90%;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.92);
+      z-index: 250;
+      box-shadow: var(--shadow-floating);
+      text-align: center;
+      display: none;
+      opacity: 0;
+      transition: all 0.25s var(--spring-bouncy);
+    }
+    .modal-dialog.active {
+      display: block;
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* ==========================================================
+       スマホ画面（横幅480px以下）に完全特化したレスポンシブ調整
+       金額や単位「円」が一切見切れない設計
+       ========================================================== */
+    @media (max-width: 480px) {
+      .container {
+        padding: 12px 12px 40px;
+      }
+      .large-header {
+        padding: 10px 4px 14px;
+      }
+      .large-header h1 {
+        font-size: 25px;
+      }
+      .apple-group {
+        border-radius: 16px;
+        margin-bottom: 18px;
+      }
+      .apple-row, .swipe-surface {
+        padding: 11px 12px;
+      }
+      .row-main-col {
+        gap: 8px;
+        margin-right: 6px;
+      }
+      .item-text-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+      }
+      .account-picker-tag {
+        font-size: 10px;
+        padding: 2px 6px;
+        margin-right: 0;
+        max-width: 120px;
+      }
+      .row-title-input {
+        font-size: 15px;
+      }
+      .row-trailing {
+        gap: 2px;
+      }
+      .apple-input {
+        width: 86px;
+        font-size: 16px;
+      }
+      .currency-symbol {
+        font-size: 13px;
+      }
+      /* サブスク行のスマホ最適化 */
+      .sub-row-item {
+        padding: 11px 12px;
+      }
+      .sub-left-col {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        margin-right: 6px;
+      }
+      .sub-segmented {
+        width: 120px;
+      }
+      .sub-segmented .ios-segment-item {
+        padding: 4px 2px;
+        font-size: 10px;
+      }
+      .sub-price-input {
+        width: 66px !important;
+        font-size: 15px;
+      }
+      /* カルーセルカード */
+      .wallet-card {
+        flex: 0 0 165px;
+        padding: 14px 12px;
+      }
+      .card-val {
+        font-size: 19px;
+      }
+      .hero-banner-card {
+        padding: 18px 14px;
+      }
+      .hero-headline-main {
+        font-size: 28px;
+      }
+      .bank-deposit-card {
+        padding: 9px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Island Toast (タップでも即座に消せる) -->
+  <div id="toast" class="toast-island" onclick="dismissToast()">
+    <span id="toastIcon">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    </span>
+    <span id="toastText">通知メッセージ</span>
+  </div>
+
+  <!-- Navigation -->
+  <header class="nav-bar">
+    <div class="nav-brand">
+      <div class="brand-mark">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="nav-title">Money Flow</div>
+    </div>
+    <div class="nav-actions">
+      <select id="monthSelect" class="month-pill-select" onchange="switchMonth(this.value)">
+        <!-- JSで動的生成 -->
+      </select>
+      <button class="nav-icon-btn" onclick="openResetModal()" title="初期化">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="large-header">
+      <h1 id="monthPageTitle">10月の収支・残高</h1>
+      <button class="nav-icon-btn" onclick="addNewMonthDialog()" style="width: auto; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; color: var(--ios-blue); gap: 4px;">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>翌月作成</span>
+      </button>
+    </div>
+
+    <!-- 1. カルーセル (ステータスカード) -->
+    <div class="carousel-section">
+      <div class="section-label">ステータス</div>
+      <div class="carousel-track" id="carouselTrack" onscroll="handleCarouselScroll()">
+        <!-- JSで動的生成 -->
+      </div>
+      <!-- ページネーションドット -->
+      <div class="carousel-dots" id="carouselDots">
+        <!-- JSで動的生成 -->
+      </div>
+    </div>
+
+    <!-- 2. 収入 -->
+    <div class="section-label">1. 収入</div>
+    <div class="apple-group">
+      <div class="apple-row">
+        <div class="row-leading">
+          <div class="icon-badge badge-green">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+        </div>
+        <span class="row-title">基本給</span>
+        <div class="row-trailing">
+          <input type="number" id="baseSalary" class="apple-input" placeholder="0" value="97288" onchange="saveIncomeData()">
+          <span class="currency-symbol">円</span>
+        </div>
+      </div>
+
+      <div class="apple-row">
+        <div class="row-leading">
+          <div class="icon-badge badge-teal">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </div>
+        </div>
+        <span class="row-title">特別手当</span>
+        <div class="row-trailing">
+          <input type="number" id="specialAllowance" class="apple-input" placeholder="0" value="3000" onchange="saveIncomeData()">
+          <span class="currency-symbol">円</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 口座引き落とし -->
+    <div class="section-label">
+      <span>2. 口座引き落とし</span>
+      <span style="font-size: 11px; color: var(--text-sub);">口座選択可 / 左スワイプで削除</span>
+    </div>
+    <div class="apple-group" id="debitList">
+      <!-- JSで動的生成 -->
+    </div>
+    <div class="apple-group" style="margin-top: -14px;">
+      <div class="add-action-cell" onclick="openBottomSheet('debit')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>引き落とし項目を追加する</span>
+      </div>
+    </div>
+
+    <!-- 4. カード払いで手元現金を避けた分 -->
+    <div class="section-label">
+      <span>3. 避けた現金</span>
+      <span style="font-size: 11px; color: var(--text-sub);">左スワイプで削除</span>
+    </div>
+    <div class="apple-group" id="avoidedCashList">
+      <!-- JSで動的生成 -->
+    </div>
+    <div class="apple-group" style="margin-top: -14px;">
+      <div class="add-action-cell" onclick="openBottomSheet('expense')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>避けた現金メモを追加する</span>
+      </div>
+    </div>
+
+    <!-- 5. サブスク -->
+    <div class="section-label">4. サブスク</div>
+    <div class="apple-group">
+      <div class="accordion-toggle" id="subAccordionHeader" onclick="toggleAccordion()">
+        <div class="accordion-left">
+          <div class="icon-badge badge-indigo">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </div>
+          <span class="row-title">登録一覧</span>
+          <span class="accordion-tag" id="subCountBadge">2件</span>
+        </div>
+        <div class="chevron-icon">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+      <div class="accordion-panel" id="subAccordionBody">
+        <div id="subscriptionList">
+          <!-- JSで動的生成 -->
+        </div>
+        <div class="add-action-cell" onclick="openBottomSheet('subscription')">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span>サブスクを登録する</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. 資産管理 -->
+    <div class="section-label">
+      <span>5. 残高 (資産管理)</span>
+      <span style="font-size: 11px; color: var(--text-sub);">名称編集可 / 左スワイプで削除</span>
+    </div>
+    <div class="apple-group" id="assetList">
+      <!-- JSで動的生成 -->
+    </div>
+    <div class="apple-group" style="margin-top: -14px;">
+      <div class="add-action-cell" onclick="openBottomSheet('asset')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>口座・資産を追加する</span>
+      </div>
+    </div>
+
+    <!-- 計算ボタン -->
+    <div style="margin: 28px 0 16px;">
+      <button class="btn-apple-primary" onclick="runCalculation()">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>計算を実行する</span>
+      </button>
+    </div>
+
+    <!-- Skeleton -->
+    <div class="skeleton-wrap" id="skeletonLoading">
+      <div class="skeleton-line w-40"></div>
+      <div class="skeleton-line h-large"></div>
+      <div class="skeleton-line w-40"></div>
+    </div>
+
+    <!-- 7. 結果 -->
+    <div class="result-wrap" id="resultArea">
+      <div class="section-label">計算結果</div>
+      
+      <div class="hero-banner-card status-shortage" id="heroCard">
+        <div id="heroBadge" class="hero-status-pill shortage">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="heroBadgeText">15,157円 不足</span>
+        </div>
+        <div class="hero-headline-sub">銀行への入金必要合計額</div>
+        <div class="hero-headline-main" id="heroDepositAmount">¥115,445</div>
+
+        <!-- 口座別の入金内訳リスト -->
+        <div style="margin-bottom: 16px;" id="bankDepositBreakdownList">
+          <!-- JSで動的生成 -->
+        </div>
+
+        <!-- ナビ -->
+        <div class="action-guide-box">
+          <div class="guide-box-title">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>アクション</span>
+          </div>
+          <div class="guide-step-row">
+            <span class="step-badge">1</span>
+            <span id="step1Text">避けておいた現金を用意</span>
+          </div>
+          <div class="guide-step-row">
+            <span class="step-badge">2</span>
+            <span id="step2Text">給料から全額を口座へ</span>
+          </div>
+          <div class="guide-step-row">
+            <span class="step-badge">3</span>
+            <span id="step3Text">不足分を手元現金から補填</span>
+          </div>
+          <div class="guide-step-row" style="color: var(--ios-green); font-weight: 600; margin-top: 6px;">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span id="step4Text">補填後の手元現金残り</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 月末残高見込み -->
+      <div class="section-label">月末の残高見込み</div>
+      <div class="apple-group" id="monthEndBalanceList">
+        <!-- JSで動的生成 -->
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ボトムシート -->
+  <div class="sheet-scrim" id="sheetScrim" onclick="closeBottomSheet()"></div>
+  <div class="sheet-panel" id="sheetPanel">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-header-title" id="sheetHeaderTitle">項目の追加</div>
+
+    <div id="autocompleteContainer" class="sheet-field-wrap">
+      <div class="quick-chips" id="quickChipsList"></div>
+    </div>
+
+    <div class="sheet-field-wrap">
+      <input type="text" id="inputSheetName" class="sheet-text-input" placeholder="名前 (例: JCBカード、靴)">
+    </div>
+    <div class="sheet-field-wrap">
+      <input type="number" id="inputSheetPrice" class="sheet-text-input" placeholder="金額 (円)">
+    </div>
+
+    <div id="debitAccountSelectWrap" class="sheet-field-wrap" style="display: none;">
+      <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 6px; font-weight: 500;">引き落とし口座:</div>
+      <select id="sheetDebitAccountSelect" class="sheet-text-input" style="background: var(--bg-card-secondary);">
+        <!-- JSで動的生成 -->
+      </select>
+    </div>
+
+    <div id="subTypeToggleWrap" class="sheet-field-wrap" style="display: none;">
+      <div class="ios-segmented" style="width: 100%;">
+        <button type="button" id="segAvoid" class="ios-segment-item selected" onclick="setBottomSheetType('avoid')">避ける</button>
+        <button type="button" id="segSalary" class="ios-segment-item" onclick="setBottomSheetType('salary')">給料から</button>
+      </div>
+    </div>
+
+    <div class="sheet-button-grid">
+      <button class="btn-sheet-cancel" onclick="closeBottomSheet()">キャンセル</button>
+      <button class="btn-sheet-submit" onclick="submitBottomSheetItem()">追加</button>
+    </div>
+  </div>
+
+  <!-- モーダル -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeResetModal()"></div>
+  <div class="modal-dialog" id="modalDialog">
+    <div class="icon-badge badge-red" style="margin: 0 auto 12px; width: 44px; height: 44px;">
+      <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </div>
+    <div style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">初期化しますか？</div>
+    <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 20px;">10月の初期サンプルデータに戻します。</div>
+    <div class="sheet-button-grid" style="margin-top: 0;">
+      <button class="btn-sheet-cancel" onclick="closeResetModal()">やめる</button>
+      <button class="btn-sheet-submit" style="background: var(--ios-red);" onclick="confirmResetData()">初期化</button>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       JavaScript Logic
+       ========================================================== -->
+  <script>
+    const octoberTemplate = {
+      baseSalary: 97288,
+      specialAllowance: 3000,
+      assetsList: [
+        { id: 201, name: "ゆうちょ銀行", balance: 0, badge: "badge-green" },
+        { id: 202, name: "手元現金", balance: 30000, badge: "badge-orange", isReserve: true },
+        { id: 203, name: "へそくり (三井住友)", balance: 0, badge: "badge-indigo" }
+      ],
+      debitList: [
+        { id: 1, name: "VISA", price: 174588, accountId: 201 },
+        { id: 2, name: "Paidy (Mac)", price: 9857, accountId: 201 }
+      ],
+      avoidedCashList: [
+        { id: 11, name: "靴", price: 20000 },
+        { id: 12, name: "飲み代", price: 13000 },
+        { id: 13, name: "定期", price: 36000 }
+      ],
+      subscriptions: [
+        { id: 101, name: "iCloud", price: 400, type: "salary" },
+        { id: 102, name: "Netflix", price: 1490, type: "avoid" }
+      ]
+    };
+
+    let multiMonthStore = JSON.parse(localStorage.getItem("money_app_multimonth_v6")) || {
+      currentMonth: "10",
+      months: {
+        "10": JSON.parse(JSON.stringify(octoberTemplate))
+      }
+    };
+
+    let activeMonthKey = multiMonthStore.currentMonth || "10";
+    let curMonth = multiMonthStore.months[activeMonthKey] || JSON.parse(JSON.stringify(octoberTemplate));
+    let sheetTarget = "debit";
+    let sheetSubType = "avoid";
+    let toastTimer = null; // 明示的グローバル宣言
+
+    window.addEventListener("DOMContentLoaded", () => {
+      generateAppleTouchIconPNG();
+      renderMonthDropdown();
+      loadActiveMonth();
+    });
+
+    // iOS Safari用 高解像度アプリアイコン自動生成 (Money Flowブランドマークと完全一致)
+    function generateAppleTouchIconPNG() {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext("2d");
+
+        // 背景: ピュアブラック (Money Flowのbrand-markと同じ上質な黒)
+        ctx.fillStyle = "#000000";
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(0, 0, 180, 180, 42);
+          ctx.fill();
+        } else {
+          ctx.fillRect(0, 0, 180, 180);
+        }
+
+        // Money Flowシンボル (白のベクターアイコン: M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6)
+        ctx.save();
+        const scale = 4.8;
+        const offset = (180 - 24 * scale) / 2; // 中央配置
+        ctx.translate(offset, offset);
+        ctx.scale(scale, scale);
+
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (typeof Path2D !== "undefined") {
+          const p = new Path2D("M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6");
+          ctx.stroke(p);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(12, 2);
+          ctx.lineTo(12, 22);
+          ctx.moveTo(17, 5);
+          ctx.lineTo(9.5, 5);
+          ctx.arc(9.5, 8.5, 3.5, -Math.PI / 2, Math.PI / 2, true);
+          ctx.lineTo(14.5, 12);
+          ctx.arc(14.5, 15.5, 3.5, -Math.PI / 2, Math.PI / 2, false);
+          ctx.lineTo(6, 19);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        const pngDataUri = canvas.toDataURL("image/png");
+        const link = document.getElementById("appleTouchIcon");
+        if (link) {
+          link.href = pngDataUri;
+        }
+        const favicon = document.querySelector("link[rel='icon']");
+        if (favicon) {
+          favicon.href = pngDataUri;
+        }
+      } catch (e) {
+        console.warn("Touch icon generation fallback", e);
+      }
+    }
+
+    function saveMultiMonth() {
+      multiMonthStore.currentMonth = activeMonthKey;
+      multiMonthStore.months[activeMonthKey] = curMonth;
+      localStorage.setItem("money_app_multimonth_v6", JSON.stringify(multiMonthStore));
+    }
+
+    function renderMonthDropdown() {
+      const select = document.getElementById("monthSelect");
+      select.innerHTML = "";
+      const monthKeys = Object.keys(multiMonthStore.months).sort((a, b) => Number(a) - Number(b));
+      monthKeys.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = `${m}月分 ▾`;
+        if (m === activeMonthKey) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function switchMonth(m) {
+      activeMonthKey = m;
+      curMonth = multiMonthStore.months[activeMonthKey];
+      saveMultiMonth();
+      loadActiveMonth();
+      triggerToast(`${m}月分を表示`, "check");
+    }
+
+    function loadActiveMonth() {
+      document.getElementById("monthPageTitle").textContent = `${activeMonthKey}月の収支・残高`;
+      document.getElementById("baseSalary").value = curMonth.baseSalary || 0;
+      document.getElementById("specialAllowance").value = curMonth.specialAllowance || 0;
+
+      renderAssetList();
+      renderDebitList();
+      renderAvoidedCashList();
+      renderSubscriptions();
+      renderCarouselCards();
+      calculateAndRender(false);
+    }
+
+    function saveIncomeData() {
+      curMonth.baseSalary = Number(document.getElementById("baseSalary").value) || 0;
+      curMonth.specialAllowance = Number(document.getElementById("specialAllowance").value) || 0;
+      saveMultiMonth();
+      calculateAndRender(false);
+    }
+
+    function addNewMonthDialog() {
+      const nextMonthNum = (Number(activeMonthKey) % 12) + 1;
+      const nextMonthKey = String(nextMonthNum);
+
+      if (multiMonthStore.months[nextMonthKey]) {
+        switchMonth(nextMonthKey);
+        document.getElementById("monthSelect").value = nextMonthKey;
+        return;
+      }
+
+      const income = curMonth.baseSalary + curMonth.specialAllowance;
+      const debits = curMonth.debitList.reduce((s, d) => s + d.price, 0);
+      let avoided = curMonth.avoidedCashList.reduce((s, a) => s + a.price, 0);
+      avoided += curMonth.subscriptions.filter(s => s.type === "avoid").reduce((s, sub) => s + sub.price, 0);
+      const need = Math.max(0, debits - avoided);
+      const diff = income - need;
+      
+      const reserveAsset = curMonth.assetsList.find(a => a.isReserve || a.name.includes("現金"));
+      const currentReserve = reserveAsset ? reserveAsset.balance : 30000;
+      const finalReserve = diff < 0 ? Math.max(0, currentReserve - Math.abs(diff)) : currentReserve;
+
+      const newMonthData = JSON.parse(JSON.stringify(curMonth));
+      newMonthData.avoidedCashList = [];
+      const newReserve = newMonthData.assetsList.find(a => a.isReserve || a.name.includes("現金"));
+      if (newReserve) {
+        newReserve.balance = finalReserve;
+      }
+
+      multiMonthStore.months[nextMonthKey] = newMonthData;
+      activeMonthKey = nextMonthKey;
+      curMonth = newMonthData;
+      saveMultiMonth();
+      renderMonthDropdown();
+      loadActiveMonth();
+      triggerToast(`✨ ${nextMonthKey}月分を作成（残高引継ぎ）`, "bolt");
+    }
+
+    // ----------------------------------------------------------
+    // 資産管理リスト (レスポンシブ見切れ防止)
+    // ----------------------------------------------------------
+    function renderAssetList() {
+      const container = document.getElementById("assetList");
+      container.innerHTML = "";
+
+      curMonth.assetsList.forEach((item) => {
+        const wrap = document.createElement("div");
+        wrap.className = "swipe-container";
+        wrap.id = `asset-item-${item.id}`;
+        wrap.innerHTML = `
+          <div class="swipe-surface" data-id="${item.id}">
+            <div class="row-main-col">
+              <div class="icon-badge ${item.badge || 'badge-blue'} item-badge">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M15 10v11M12 2L2 7h20L12 2z"/></svg>
+              </div>
+              <input type="text" class="row-title-input" value="${escapeStr(item.name)}" onchange="updateAssetName(${item.id}, this.value)" placeholder="名称">
+            </div>
+            <div class="row-trailing">
+              <input type="number" class="apple-input" value="${item.balance}" onchange="updateAssetBalance(${item.id}, this.value)">
+              <span class="currency-symbol">円</span>
+            </div>
+          </div>
+          <button class="swipe-delete-trigger" onclick="deleteAssetItem(${item.id})">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        `;
+        setupSwipe(wrap.querySelector(".swipe-surface"));
+        container.appendChild(wrap);
+      });
+    }
+
+    function updateAssetName(id, newName) {
+      const item = curMonth.assetsList.find(a => a.id === id);
+      if (item) {
+        item.name = newName.trim() || "名称未設定";
+        saveMultiMonth();
+        renderDebitList();
+        renderCarouselCards();
+        calculateAndRender(false);
+      }
+    }
+
+    function updateAssetBalance(id, newBalance) {
+      const item = curMonth.assetsList.find(a => a.id === id);
+      if (item) {
+        item.balance = Number(newBalance) || 0;
+        saveMultiMonth();
+        renderCarouselCards();
+        calculateAndRender(false);
+      }
+    }
+
+    function deleteAssetItem(id) {
+      if (curMonth.assetsList.length <= 1) {
+        alert("資産は最低1つ必要です");
+        return;
+      }
+      const row = document.getElementById(`asset-item-${id}`);
+      if (row) {
+        row.classList.add("removing");
+        setTimeout(() => {
+          curMonth.assetsList = curMonth.assetsList.filter(a => a.id !== id);
+          saveMultiMonth();
+          renderAssetList();
+          renderDebitList();
+          renderCarouselCards();
+          calculateAndRender(false);
+          triggerToast("資産項目を削除しました", "trash");
+        }, 280);
+      }
+    }
+
+    // ----------------------------------------------------------
+    // 口座引き落としリスト (レスポンシブ見切れ防止)
+    // ----------------------------------------------------------
+    function renderDebitList() {
+      const container = document.getElementById("debitList");
+      container.innerHTML = "";
+
+      if (curMonth.debitList.length === 0) {
+        container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-sub); font-size: 14px;">引き落とし項目はありません</div>`;
+        return;
+      }
+
+      curMonth.debitList.forEach((item) => {
+        let accountOptions = "";
+        curMonth.assetsList.forEach((acc) => {
+          const isSelected = item.accountId === acc.id ? "selected" : "";
+          accountOptions += `<option value="${acc.id}" ${isSelected}>${escapeStr(acc.name)}</option>`;
+        });
+
+        const wrap = document.createElement("div");
+        wrap.className = "swipe-container";
+        wrap.id = `debit-item-${item.id}`;
+        wrap.innerHTML = `
+          <div class="swipe-surface" data-id="${item.id}">
+            <div class="row-main-col">
+              <div class="icon-badge badge-blue item-badge">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <div class="item-text-group">
+                <input type="text" class="row-title-input" value="${escapeStr(item.name)}" onchange="updateDebitName(${item.id}, this.value)" placeholder="引き落とし名">
+                <select class="account-picker-tag" onchange="updateDebitAccount(${item.id}, this.value)">
+                  ${accountOptions}
+                </select>
+              </div>
+            </div>
+            <div class="row-trailing">
+              <input type="number" class="apple-input" value="${item.price}" onchange="updateDebitPrice(${item.id}, this.value)">
+              <span class="currency-symbol">円</span>
+            </div>
+          </div>
+          <button class="swipe-delete-trigger" onclick="deleteDebitItem(${item.id})">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        `;
+        setupSwipe(wrap.querySelector(".swipe-surface"));
+        container.appendChild(wrap);
+      });
+    }
+
+    function updateDebitName(id, name) {
+      const item = curMonth.debitList.find(d => d.id === id);
+      if (item) {
+        item.name = name.trim() || "引き落とし";
+        saveMultiMonth();
+      }
+    }
+    function updateDebitAccount(id, accountId) {
+      const item = curMonth.debitList.find(d => d.id === id);
+      if (item) {
+        item.accountId = Number(accountId);
+        saveMultiMonth();
+        calculateAndRender(false);
+        triggerToast("引き落とし口座を変更", "check");
+      }
+    }
+    function updateDebitPrice(id, price) {
+      const item = curMonth.debitList.find(d => d.id === id);
+      if (item) {
+        item.price = Number(price) || 0;
+        saveMultiMonth();
+        calculateAndRender(false);
+      }
+    }
+    function deleteDebitItem(id) {
+      const row = document.getElementById(`debit-item-${id}`);
+      if (row) {
+        row.classList.add("removing");
+        setTimeout(() => {
+          curMonth.debitList = curMonth.debitList.filter(d => d.id !== id);
+          saveMultiMonth();
+          renderDebitList();
+          calculateAndRender(false);
+          triggerToast("項目を削除しました", "trash");
+        }, 280);
+      }
+    }
+
+    // ----------------------------------------------------------
+    // 避けた現金リスト (レスポンシブ見切れ防止)
+    // ----------------------------------------------------------
+    function renderAvoidedCashList() {
+      const container = document.getElementById("avoidedCashList");
+      container.innerHTML = "";
+
+      if (curMonth.avoidedCashList.length === 0) {
+        container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-sub); font-size: 14px;">避けた現金はありません</div>`;
+        return;
+      }
+
+      curMonth.avoidedCashList.forEach((item) => {
+        const wrap = document.createElement("div");
+        wrap.className = "swipe-container";
+        wrap.id = `avoid-item-${item.id}`;
+        wrap.innerHTML = `
+          <div class="swipe-surface" data-id="${item.id}">
+            <div class="row-main-col">
+              <div class="icon-badge badge-orange item-badge">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <input type="text" class="row-title-input" value="${escapeStr(item.name)}" onchange="updateAvoidedName(${item.id}, this.value)" placeholder="メモ">
+            </div>
+            <div class="row-trailing">
+              <input type="number" class="apple-input" value="${item.price}" onchange="updateAvoidedPrice(${item.id}, this.value)">
+              <span class="currency-symbol">円</span>
+            </div>
+          </div>
+          <button class="swipe-delete-trigger" onclick="deleteAvoidedItem(${item.id})">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        `;
+        setupSwipe(wrap.querySelector(".swipe-surface"));
+        container.appendChild(wrap);
+      });
+    }
+
+    function updateAvoidedName(id, name) {
+      const item = curMonth.avoidedCashList.find(a => a.id === id);
+      if (item) {
+        item.name = name.trim() || "メモ";
+        saveMultiMonth();
+      }
+    }
+    function updateAvoidedPrice(id, price) {
+      const item = curMonth.avoidedCashList.find(a => a.id === id);
+      if (item) {
+        item.price = Number(price) || 0;
+        saveMultiMonth();
+        calculateAndRender(false);
+      }
+    }
+    function deleteAvoidedItem(id) {
+      const row = document.getElementById(`avoid-item-${id}`);
+      if (row) {
+        row.classList.add("removing");
+        setTimeout(() => {
+          curMonth.avoidedCashList = curMonth.avoidedCashList.filter(i => i.id !== id);
+          saveMultiMonth();
+          renderAvoidedCashList();
+          calculateAndRender(false);
+          triggerToast("項目を削除しました", "trash");
+        }, 280);
+      }
+    }
+
+    // ----------------------------------------------------------
+    // サブスクリスト (レスポンシブ見切れ防止)
+    // ----------------------------------------------------------
+    function renderSubscriptions() {
+      const container = document.getElementById("subscriptionList");
+      const badge = document.getElementById("subCountBadge");
+      container.innerHTML = "";
+      badge.textContent = `${curMonth.subscriptions.length}件`;
+
+      if (curMonth.subscriptions.length === 0) {
+        container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-sub); font-size: 13px;">登録されたサブスクはありません</div>`;
+        return;
+      }
+
+      curMonth.subscriptions.forEach((sub) => {
+        const row = document.createElement("div");
+        row.className = "sub-row-item";
+        row.innerHTML = `
+          <div class="sub-left-col">
+            <input type="text" class="row-title-input sub-name-input" value="${escapeStr(sub.name)}" onchange="updateSubName(${sub.id}, this.value)" placeholder="サブスク名">
+            <div class="ios-segmented sub-segmented">
+              <button type="button" class="ios-segment-item ${sub.type === 'avoid' ? 'selected' : ''}" onclick="switchSubType(${sub.id}, 'avoid')">避ける</button>
+              <button type="button" class="ios-segment-item ${sub.type === 'salary' ? 'selected' : ''}" onclick="switchSubType(${sub.id}, 'salary')">給料から</button>
+            </div>
+          </div>
+          <div class="sub-right-col">
+            <div class="row-trailing">
+              <input type="number" class="apple-input sub-price-input" value="${sub.price}" onchange="updateSubPrice(${sub.id}, this.value)">
+              <span class="currency-symbol">円</span>
+            </div>
+            <button class="sub-delete-btn" onclick="deleteSubscription(${sub.id})" title="削除">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function updateSubName(id, name) {
+      const sub = curMonth.subscriptions.find(s => s.id === id);
+      if (sub) {
+        sub.name = name.trim() || "サブスク";
+        saveMultiMonth();
+      }
+    }
+    function updateSubPrice(id, price) {
+      const sub = curMonth.subscriptions.find(s => s.id === id);
+      if (sub) {
+        sub.price = Number(price) || 0;
+        saveMultiMonth();
+        calculateAndRender(false);
+      }
+    }
+    function switchSubType(id, type) {
+      const sub = curMonth.subscriptions.find(s => s.id === id);
+      if (sub) {
+        sub.type = type;
+        saveMultiMonth();
+        renderSubscriptions();
+        calculateAndRender(false);
+        triggerToast("支払い方法を更新", "check");
+      }
+    }
+    function deleteSubscription(id) {
+      curMonth.subscriptions = curMonth.subscriptions.filter(s => s.id !== id);
+      saveMultiMonth();
+      renderSubscriptions();
+      calculateAndRender(false);
+      triggerToast("サブスクを削除しました", "trash");
+    }
+
+    function toggleAccordion() {
+      const header = document.getElementById("subAccordionHeader");
+      const panel = document.getElementById("subAccordionBody");
+      header.classList.toggle("open");
+      panel.classList.toggle("open");
+    }
+
+    function setupSwipe(elem) {
+      let startX = 0;
+      let currX = 0;
+
+      elem.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+      }, { passive: true });
+
+      elem.addEventListener("touchmove", (e) => {
+        currX = e.touches[0].clientX;
+        const diff = currX - startX;
+        if (diff < 0 && diff > -100) {
+          elem.style.transform = `translateX(${diff}px)`;
+        }
+      }, { passive: true });
+
+      elem.addEventListener("touchend", () => {
+        const diff = currX - startX;
+        if (diff < -40) {
+          elem.style.transform = "translateX(-80px)";
+        } else {
+          elem.style.transform = "translateX(0px)";
+        }
+      });
+    }
+
+    // ----------------------------------------------------------
+    // カルーセル描画 ＆ スクロール完全同期
+    // ----------------------------------------------------------
+    function renderCarouselCards() {
+      const track = document.getElementById("carouselTrack");
+      const dots = document.getElementById("carouselDots");
+      track.innerHTML = "";
+      dots.innerHTML = "";
+
+      track.innerHTML += `
+        <div class="wallet-card primary" id="carouselSummaryCard" onclick="scrollToCard(0)">
+          <div class="card-top">
+            <span class="card-label">過不足</span>
+            <span class="icon-badge badge-blue">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 10l5-5 5 5M7 14l5 5 5-5"/></svg>
+            </span>
+          </div>
+          <div class="card-val" id="cardSummaryAmount">¥0</div>
+        </div>
+      `;
+      dots.innerHTML += `<div class="carousel-dot active" id="dot-0" onclick="scrollToCard(0)"></div>`;
+
+      curMonth.assetsList.forEach((asset, idx) => {
+        const cardIdx = idx + 1;
+        track.innerHTML += `
+          <div class="wallet-card" id="carousel-card-${asset.id}" onclick="scrollToCard(${cardIdx})">
+            <div class="card-top">
+              <span class="card-label">${escapeStr(asset.name)}</span>
+              <span class="icon-badge ${asset.badge || 'badge-blue'}">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M15 10v11M12 2L2 7h20L12 2z"/></svg>
+              </span>
+            </div>
+            <div class="card-val" id="card-asset-val-${asset.id}">¥${asset.balance.toLocaleString()}</div>
+          </div>
+        `;
+        dots.innerHTML += `<div class="carousel-dot" id="dot-${cardIdx}" onclick="scrollToCard(${cardIdx})"></div>`;
+      });
+    }
+
+    function scrollToCard(idx) {
+      const track = document.getElementById("carouselTrack");
+      const cards = track.querySelectorAll(".wallet-card");
+      if (cards[idx]) {
+        cards[idx].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      }
+    }
+
+    function handleCarouselScroll() {
+      const track = document.getElementById("carouselTrack");
+      const totalCards = curMonth.assetsList.length + 1;
+      if (totalCards <= 1) return;
+
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      let activeIdx = 0;
+
+      if (track.scrollLeft >= maxScroll - 12) {
+        activeIdx = totalCards - 1;
+      } else if (track.scrollLeft <= 10) {
+        activeIdx = 0;
+      } else {
+        const cards = track.querySelectorAll(".wallet-card");
+        const trackCenter = track.scrollLeft + (track.clientWidth / 2);
+        let minDiff = Infinity;
+
+        cards.forEach((card, idx) => {
+          const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+          const diff = Math.abs(trackCenter - cardCenter);
+          if (diff < minDiff) {
+            minDiff = diff;
+            activeIdx = idx;
+          }
+        });
+      }
+
+      for (let i = 0; i < totalCards; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (dot) {
+          if (i === activeIdx) dot.classList.add("active");
+          else dot.classList.remove("active");
+        }
+      }
+    }
+
+    // ----------------------------------------------------------
+    // ボトムシート
+    // ----------------------------------------------------------
+    function openBottomSheet(mode) {
+      sheetTarget = mode;
+      document.getElementById("inputSheetName").value = "";
+      document.getElementById("inputSheetPrice").value = "";
+      const chipBox = document.getElementById("quickChipsList");
+      chipBox.innerHTML = "";
+
+      const debitWrap = document.getElementById("debitAccountSelectWrap");
+      const subWrap = document.getElementById("subTypeToggleWrap");
+
+      if (mode === "debit") {
+        document.getElementById("sheetHeaderTitle").textContent = "口座引き落としを追加";
+        debitWrap.style.display = "block";
+        subWrap.style.display = "none";
+
+        const debitSelect = document.getElementById("sheetDebitAccountSelect");
+        debitSelect.innerHTML = "";
+        curMonth.assetsList.forEach((acc) => {
+          debitSelect.innerHTML += `<option value="${acc.id}">${escapeStr(acc.name)}</option>`;
+        });
+
+        ["JCB", "VISA", "Paidy", "Suica", "電気代", "ガス代"].forEach(txt => {
+          chipBox.innerHTML += `<span class="quick-chip" onclick="fillChip('${txt}')">${txt}</span>`;
+        });
+      } else if (mode === "expense") {
+        document.getElementById("sheetHeaderTitle").textContent = "避けた現金メモを追加";
+        debitWrap.style.display = "none";
+        subWrap.style.display = "none";
+        ["靴", "飲み代", "定期", "日用品", "食費"].forEach(txt => {
+          chipBox.innerHTML += `<span class="quick-chip" onclick="fillChip('${txt}')">${txt}</span>`;
+        });
+      } else if (mode === "asset") {
+        document.getElementById("sheetHeaderTitle").textContent = "口座・資産を追加";
+        debitWrap.style.display = "none";
+        subWrap.style.display = "none";
+        ["ゆうちょ銀行", "手元現金", "三井住友銀行", "三菱UFJ", "PayPay", "SBI証券"].forEach(txt => {
+          chipBox.innerHTML += `<span class="quick-chip" onclick="fillChip('${txt}')">${txt}</span>`;
+        });
+      } else {
+        document.getElementById("sheetHeaderTitle").textContent = "サブスクを登録";
+        debitWrap.style.display = "none";
+        subWrap.style.display = "block";
+        setBottomSheetType("avoid");
+        ["Netflix", "Apple Music", "iCloud", "YouTube", "Amazon"].forEach(txt => {
+          chipBox.innerHTML += `<span class="quick-chip" onclick="fillChip('${txt}')">${txt}</span>`;
+        });
+      }
+
+      document.getElementById("sheetScrim").classList.add("visible");
+      document.getElementById("sheetPanel").classList.add("visible");
+    }
+
+    function closeBottomSheet() {
+      document.getElementById("sheetScrim").classList.remove("visible");
+      document.getElementById("sheetPanel").classList.remove("visible");
+    }
+
+    function fillChip(name) {
+      document.getElementById("inputSheetName").value = name;
+    }
+
+    function setBottomSheetType(type) {
+      sheetSubType = type;
+      document.getElementById("segAvoid").className = "ios-segment-item " + (type === 'avoid' ? 'selected' : '');
+      document.getElementById("segSalary").className = "ios-segment-item " + (type === 'salary' ? 'selected' : '');
+    }
+
+    function submitBottomSheetItem() {
+      const name = document.getElementById("inputSheetName").value.trim();
+      const price = Number(document.getElementById("inputSheetPrice").value) || 0;
+
+      if (!name) {
+        alert("名前を入力してください");
+        return;
+      }
+
+      if (sheetTarget === "debit") {
+        const accSelect = document.getElementById("sheetDebitAccountSelect");
+        const accountId = Number(accSelect.value) || (curMonth.assetsList[0] ? curMonth.assetsList[0].id : 201);
+        curMonth.debitList.push({ id: Date.now(), name, price, accountId });
+        renderDebitList();
+      } else if (sheetTarget === "expense") {
+        curMonth.avoidedCashList.push({ id: Date.now(), name, price });
+        renderAvoidedCashList();
+      } else if (sheetTarget === "asset") {
+        const badgeColors = ["badge-blue", "badge-green", "badge-orange", "badge-indigo", "badge-purple", "badge-teal"];
+        const randBadge = badgeColors[curMonth.assetsList.length % badgeColors.length];
+        curMonth.assetsList.push({ id: Date.now(), name, balance: price, badge: randBadge });
+        renderAssetList();
+        renderDebitList();
+        renderCarouselCards();
+      } else {
+        curMonth.subscriptions.push({ id: Date.now(), name, price, type: sheetSubType });
+        renderSubscriptions();
+      }
+
+      saveMultiMonth();
+      calculateAndRender(false);
+      closeBottomSheet();
+      triggerToast("追加しました", "check");
+    }
+
+    // ----------------------------------------------------------
+    // 計算実行
+    // ----------------------------------------------------------
+    function runCalculation() {
+      curMonth.baseSalary = Number(document.getElementById("baseSalary").value) || 0;
+      curMonth.specialAllowance = Number(document.getElementById("specialAllowance").value) || 0;
+      saveMultiMonth();
+
+      document.getElementById("skeletonLoading").style.display = "block";
+      document.getElementById("resultArea").style.display = "none";
+
+      setTimeout(() => {
+        document.getElementById("skeletonLoading").style.display = "none";
+        calculateAndRender(true);
+        document.getElementById("resultArea").style.display = "block";
+        triggerToast("計算完了", "bolt");
+      }, 300);
+    }
+
+    function calculateAndRender(animated = false) {
+      const incomeTotal = curMonth.baseSalary + curMonth.specialAllowance;
+      const directDebitTotal = curMonth.debitList.reduce((sum, item) => sum + item.price, 0);
+
+      let avoidedCashTotal = curMonth.avoidedCashList.reduce((sum, item) => sum + item.price, 0);
+      const subAvoidTotal = curMonth.subscriptions
+        .filter(s => s.type === "avoid")
+        .reduce((sum, item) => sum + item.price, 0);
+
+      avoidedCashTotal += subAvoidTotal;
+
+      const totalNeedDeposit = Math.max(0, directDebitTotal - avoidedCashTotal);
+      const diff = incomeTotal - totalNeedDeposit;
+      const isShortage = diff < 0;
+      const shortageAmount = Math.abs(diff);
+
+      let reserveAsset = curMonth.assetsList.find(a => a.isReserve || a.name.includes("現金"));
+      if (!reserveAsset && curMonth.assetsList.length > 0) {
+        reserveAsset = curMonth.assetsList[0];
+      }
+      const initialCash = reserveAsset ? reserveAsset.balance : 30000;
+      let finalCash = isShortage ? Math.max(0, initialCash - shortageAmount) : initialCash;
+
+      // 1. カルーセル過不足カード
+      const summaryCard = document.getElementById("carouselSummaryCard");
+      if (summaryCard) {
+        if (isShortage) {
+          summaryCard.className = "wallet-card accent-red";
+          if (animated) animateCount("cardSummaryAmount", -shortageAmount, "-¥");
+          else document.getElementById("cardSummaryAmount").textContent = `-¥${shortageAmount.toLocaleString()}`;
+        } else {
+          summaryCard.className = "wallet-card accent-green";
+          if (animated) animateCount("cardSummaryAmount", diff, "+¥");
+          else document.getElementById("cardSummaryAmount").textContent = `+¥${diff.toLocaleString()}`;
+        }
+      }
+
+      // 2. 各資産カードの金額同期
+      curMonth.assetsList.forEach((asset) => {
+        const valElem = document.getElementById(`card-asset-val-${asset.id}`);
+        if (valElem) {
+          const displayBal = (asset === reserveAsset && isShortage) ? finalCash : asset.balance;
+          if (animated) animateCount(`card-asset-val-${asset.id}`, displayBal);
+          else valElem.textContent = `¥${displayBal.toLocaleString()}`;
+        }
+      });
+
+      // 3. ヒーローカード
+      const heroCard = document.getElementById("heroCard");
+      const heroBadge = document.getElementById("heroBadge");
+      const heroBadgeText = document.getElementById("heroBadgeText");
+
+      if (animated) animateCount("heroDepositAmount", totalNeedDeposit);
+      else document.getElementById("heroDepositAmount").textContent = `¥${totalNeedDeposit.toLocaleString()}`;
+
+      // 口座ごとの入金内訳
+      const bankBreakdownContainer = document.getElementById("bankDepositBreakdownList");
+      bankBreakdownContainer.innerHTML = "";
+
+      const accountDebitMap = {};
+      curMonth.debitList.forEach((d) => {
+        const accId = d.accountId || (curMonth.assetsList[0] ? curMonth.assetsList[0].id : 0);
+        accountDebitMap[accId] = (accountDebitMap[accId] || 0) + d.price;
+      });
+
+      let remainingAvoided = avoidedCashTotal;
+      curMonth.assetsList.forEach((acc) => {
+        const rawDebit = accountDebitMap[acc.id] || 0;
+        if (rawDebit > 0) {
+          const deduction = Math.min(rawDebit, remainingAvoided);
+          const netDeposit = rawDebit - deduction;
+          remainingAvoided -= deduction;
+
+          bankBreakdownContainer.innerHTML += `
+            <div class="bank-deposit-card">
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; margin-right: 8px;">
+                <span class="icon-badge ${acc.badge || 'badge-blue'}" style="width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M15 10v11M12 2L2 7h20L12 2z"/></svg>
+                </span>
+                <span style="font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeStr(acc.name)} への入金</span>
+              </div>
+              <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0;">¥${netDeposit.toLocaleString()}</span>
+            </div>
+          `;
+        }
+      });
+
+      if (isShortage) {
+        heroCard.className = "hero-banner-card status-shortage";
+        heroBadge.className = "hero-status-pill shortage";
+        heroBadgeText.textContent = `${shortageAmount.toLocaleString()}円 不足`;
+
+        document.getElementById("step1Text").textContent = `避けておいた現金（${avoidedCashTotal.toLocaleString()}円）を用意`;
+        document.getElementById("step2Text").textContent = `給料から全額（${incomeTotal.toLocaleString()}円）を各口座へ入金`;
+        document.getElementById("step3Text").innerHTML = `不足分の <strong>${shortageAmount.toLocaleString()}円</strong> を${escapeStr(reserveAsset ? reserveAsset.name : '手元現金')}から補填`;
+        document.getElementById("step4Text").innerHTML = `補填後の残り：<strong>${finalCash.toLocaleString()}円</strong>`;
+      } else {
+        heroCard.className = "hero-banner-card status-ok";
+        heroBadge.className = "hero-status-pill ok";
+        heroBadgeText.textContent = `黒字（${diff.toLocaleString()}円 余り）`;
+
+        document.getElementById("step1Text").textContent = `避けておいた現金（${avoidedCashTotal.toLocaleString()}円）を用意`;
+        document.getElementById("step2Text").textContent = `給料から各口座へ入金`;
+        document.getElementById("step3Text").textContent = `給料の残り（${diff.toLocaleString()}円）はお財布へ`;
+        document.getElementById("step4Text").innerHTML = `${escapeStr(reserveAsset ? reserveAsset.name : '手元現金')}は手付かず：<strong>${initialCash.toLocaleString()}円</strong>`;
+      }
+
+      // 月末残高見込み
+      const balanceContainer = document.getElementById("monthEndBalanceList");
+      balanceContainer.innerHTML = "";
+
+      balanceContainer.innerHTML += `
+        <div class="apple-row">
+          <div class="row-leading">
+            <div class="icon-badge badge-gray">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+          </div>
+          <span class="row-title">給料残金</span>
+          <span class="card-val" style="font-size: 16px; flex-shrink: 0;">¥${isShortage ? '0' : diff.toLocaleString()}</span>
+        </div>
+      `;
+
+      curMonth.assetsList.forEach((asset) => {
+        const bal = (asset === reserveAsset && isShortage) ? finalCash : asset.balance;
+        balanceContainer.innerHTML += `
+          <div class="apple-row">
+            <div class="row-leading">
+              <div class="icon-badge ${asset.badge || 'badge-blue'}">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M15 10v11M12 2L2 7h20L12 2z"/></svg>
+              </div>
+            </div>
+            <span class="row-title">${escapeStr(asset.name)}</span>
+            <span class="card-val" style="font-size: 16px; flex-shrink: 0; ${asset === reserveAsset ? 'color: var(--ios-blue);' : ''}">¥${bal.toLocaleString()}</span>
+          </div>
+        `;
+      });
+    }
+
+    function animateCount(elemId, targetVal, prefix = "¥") {
+      const elem = document.getElementById(elemId);
+      if (!elem) return;
+      const startVal = parseInt(elem.textContent.replace(/[^0-9.-]/g, "")) || 0;
+      const diff = targetVal - startVal;
+      if (diff === 0) {
+        elem.textContent = `${prefix}${targetVal.toLocaleString()}`;
+        return;
+      }
+      const duration = 280;
+      const startTime = performance.now();
+      function update(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const current = Math.round(startVal + diff * ease);
+        elem.textContent = `${prefix}${current.toLocaleString()}`;
+        if (progress < 1) requestAnimationFrame(update);
+        else elem.textContent = `${prefix}${targetVal.toLocaleString()}`;
+      }
+      requestAnimationFrame(update);
+    }
+
+    // ----------------------------------------------------------
+    // トースト通知 (確実に自動でフェードアウトする実装)
+    // ----------------------------------------------------------
+    function triggerToast(text, iconType = "check") {
+      const toast = document.getElementById("toast");
+      const toastText = document.getElementById("toastText");
+      const toastIcon = document.getElementById("toastIcon");
+
+      if (!toast) return;
+
+      toastText.textContent = text;
+      if (iconType === "trash") {
+        toastIcon.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+      } else if (iconType === "bolt") {
+        toastIcon.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+      } else {
+        toastIcon.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>`;
+      }
+
+      // 既存タイマーをクリア
+      if (toastTimer) {
+        clearTimeout(toastTimer);
+        toastTimer = null;
+      }
+
+      // リフローを挟んで確実にアニメーションを発火
+      toast.classList.remove("active");
+      void toast.offsetWidth;
+      toast.classList.add("active");
+
+      // 1.5秒後に確実にフェードアウト
+      toastTimer = setTimeout(() => {
+        dismissToast();
+      }, 1500);
+    }
+
+    function dismissToast() {
+      const toast = document.getElementById("toast");
+      if (toast) {
+        toast.classList.remove("active");
+      }
+      if (toastTimer) {
+        clearTimeout(toastTimer);
+        toastTimer = null;
+      }
+    }
+
+    function openResetModal() {
+      document.getElementById("modalBackdrop").classList.add("active");
+      document.getElementById("modalDialog").classList.add("active");
+    }
+    function closeResetModal() {
+      document.getElementById("modalBackdrop").classList.remove("active");
+      document.getElementById("modalDialog").classList.remove("active");
+    }
+    function confirmResetData() {
+      multiMonthStore = {
+        currentMonth: "10",
+        months: {
+          "10": JSON.parse(JSON.stringify(octoberTemplate))
+        }
+      };
+      activeMonthKey = "10";
+      curMonth = multiMonthStore.months["10"];
+      saveMultiMonth();
+      renderMonthDropdown();
+      loadActiveMonth();
+      closeResetModal();
+      triggerToast("初期データにリセットしました", "check");
+    }
+
+    function escapeStr(s) {
+      return s.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
+    }
+  </script>
+</body>
+</html>
